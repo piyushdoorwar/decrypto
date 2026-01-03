@@ -128,15 +128,61 @@ function showInstructions() {
   showModal("How to Play Decrypto", content);
 }
 
+function showIconPicker() {
+  const iconOptions = ICONS.map(i => `
+    <button class="chip ${LOCAL.icon === i.id ? 'selected' : ''}" data-icon="${i.id}" type="button">
+      <span class="avatar">${i.svg}</span>
+    </button>
+  `).join("");
+  
+  const customAvatarHtml = LOCAL.customAvatar ? `
+    <button class="chip ${LOCAL.icon === 'custom' ? 'selected' : ''}" data-icon="custom" type="button">
+      <span class="avatar"><img src="${LOCAL.customAvatar}" alt="Custom" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/></span>
+    </button>
+  ` : '';
+  
+  const content = `
+    <div id="iconGrid">${iconOptions}${customAvatarHtml}</div>
+    <div class="sep"></div>
+    <label class="btn-upload">
+      <input type="file" id="avatarUpload" accept="image/*" style="display:none" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+      </svg>
+      <span>Upload Custom Image</span>
+    </label>
+  `;
+  
+  showModal("Choose Your Avatar", content);
+  
+  // Wire up icon selection
+  setTimeout(() => {
+    document.querySelectorAll("#iconGrid [data-icon]")?.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const iconId = btn.dataset.icon;
+        LOCAL.icon = iconId;
+        showToast("Avatar updated!", "success");
+        // Close modal and re-render
+        document.querySelector(".modal-overlay")?.click();
+        render();
+      });
+    });
+    
+    // Wire up image upload
+    document.getElementById("avatarUpload")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        handleImageUpload(file);
+        document.querySelector(".modal-overlay")?.click();
+      }
+    });
+  }, 100);
+}
+
 // Image upload handler
 function handleImageUpload(file) {
   if (!file || !file.type.startsWith('image/')) {
     showToast("Please upload a valid image file", "error");
-    return;
-  }
-  
-  if (file.size > 500000) { // 500KB limit
-    showToast("Image too large. Max 500KB", "warning");
     return;
   }
   
@@ -146,7 +192,7 @@ function handleImageUpload(file) {
     LOCAL.icon = "custom";
     showToast("Custom avatar uploaded!", "success");
     // Re-render to show the new avatar
-    if (highlightIcon) highlightIcon("custom");
+    render();
   };
   reader.readAsDataURL(file);
 }
@@ -272,91 +318,54 @@ function render(){
 
 // ---------- screens ----------
 function renderIdentity(){
-  const iconOptions = ICONS.map(i => `
-    <button class="chip" data-icon="${i.id}" type="button">
-      <span class="avatar">${i.svg}</span>
-      <strong>${i.label}</strong>
-    </button>
-  `).join("");
-  
-  const customAvatarHtml = LOCAL.customAvatar ? `
-    <button class="chip" data-icon="custom" type="button">
-      <span class="avatar"><img src="${LOCAL.customAvatar}" alt="Custom" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/></span>
-      <strong>Custom</strong>
-    </button>
-  ` : '';
+  const currentIcon = LOCAL.icon === "custom" && LOCAL.customAvatar 
+    ? `<img src="${LOCAL.customAvatar}" alt="Custom" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>` 
+    : (ICONS.find(i => i.id === LOCAL.icon)?.svg || ICONS[0].svg);
 
   return `
   <section class="card">
-    <h2>Start</h2>
-    <p>Enter your name and pick an icon. This is saved on your device.</p>
+    <h2>Start Game</h2>
+    <p>Enter your name and choose your avatar to begin.</p>
 
     <div class="grid2">
       <div>
-        <h3>Name</h3>
-        <input id="name" placeholder="Your name" value="${escapeHtml(LOCAL.name)}" />
+        <h3>Your Name</h3>
+        <input id="name" placeholder="Enter your name" value="${escapeHtml(LOCAL.name)}" />
       </div>
       <div>
-        <h3>Room code</h3>
-        <input id="room" class="mono" placeholder="e.g. NYE2026" value="${escapeHtml(LOCAL.lastRoom)}" />
+        <h3>Room Code</h3>
+        <input id="room" class="mono" placeholder="e.g. ABC123" value="${escapeHtml(LOCAL.lastRoom)}" />
       </div>
     </div>
 
     <div class="sep"></div>
 
-    <div class="spread">
-      <h3>Pick an icon</h3>
-      <div class="hstack">
-        <label class="btn-upload">
-          <input type="file" id="avatarUpload" accept="image/*" style="display:none" />
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-          </svg>
-          <span>Upload Image</span>
-        </label>
-      </div>
-    </div>
-    <div class="chips" id="iconGrid">${iconOptions}${customAvatarHtml}</div>
+    <h3>Your Avatar</h3>
+    <button class="btn-choose-icon" id="chooseIcon" type="button">
+      <div class="current-icon">${currentIcon}</div>
+      <span>Choose Avatar</span>
+    </button>
 
     <div class="sep"></div>
 
     <div class="row">
       <div class="col">
-        <button class="btn-primary" id="createRoom">Create room</button>
+        <button class="btn-primary" id="createRoom">Create Room</button>
       </div>
       <div class="col">
-        <button id="joinRoom">Join room</button>
+        <button id="joinRoom">Join Room</button>
       </div>
     </div>
 
-    <p class="warn">Needs exactly 4 players to start.</p>
-    <p class="muted">Tip: for remote play, share the room code.</p>
+    <p class="warn" style="text-align:center; margin-top:16px;">⚠️ Requires exactly 4 players to start</p>
   </section>
   `;
 }
 
 function wireIdentity(){
-  const iconGrid = $("#iconGrid");
-  let selected = LOCAL.icon;
-
-  highlightIcon(selected);
-  
-  // Image upload handler
-  $("#avatarUpload")?.addEventListener("change", (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleImageUpload(file);
-      // Re-render to show new custom avatar option
-      render();
-    }
-  });
-
-  iconGrid?.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-icon]");
-    if(!btn) return;
-    selected = btn.dataset.icon;
-    LOCAL.icon = selected;
-    highlightIcon(selected);
+  // Open icon picker modal
+  $("#chooseIcon")?.addEventListener("click", () => {
+    showIconPicker();
   });
 
   $("#createRoom")?.addEventListener("click", () => {
@@ -833,14 +842,6 @@ function makeRoomCode(){
   const a = Math.random().toString(36).slice(2,5).toUpperCase();
   const b = Math.random().toString(36).slice(2,5).toUpperCase();
   return `${a}${b}`;
-}
-
-function highlightIcon(selected){
-  document.querySelectorAll("[data-icon]")?.forEach(btn => {
-    const on = btn.dataset.icon === selected;
-    btn.style.borderColor = on ? "rgba(122,162,255,.5)" : "var(--line)";
-    btn.style.color = on ? "var(--text)" : "var(--muted)";
-  });
 }
 
 function allMapped(mapping){
