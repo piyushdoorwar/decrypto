@@ -128,7 +128,34 @@ function showInstructions() {
   showModal("How to Play Decrypto", content);
 }
 
+function showHistory() {
+  if (!view || !view.log) {
+    showToast("No history available", "info");
+    return;
+  }
+  
+  const content = `
+    <div class="instructions">
+      <p style="color:var(--muted); margin-bottom:20px;">Complete turn-by-turn game history</p>
+      <div class="chips" style="flex-direction:column; align-items:stretch;">
+        ${(view.log || []).reverse().map((line, idx) =>
+          `<div class="chip mono" style="justify-content:flex-start; padding:14px 18px; margin-bottom:8px;">
+            <span style="color:var(--neon-yellow); margin-right:12px; font-weight:900;">#${view.log.length - idx}</span>
+            ${escapeHtml(line)}
+          </div>`
+        ).join("") || `<span class="chip">No events yet</span>`}
+      </div>
+    </div>
+  `;
+  
+  showModal("🧾 Turn History", content);
+}
+
 function showIconPicker() {
+  // Save current form values before modal
+  const currentName = $("#name")?.value || "";
+  const currentRoom = $("#room")?.value || "";
+  
   const iconOptions = ICONS.map(i => `
     <button class="chip ${LOCAL.icon === i.id ? 'selected' : ''}" data-icon="${i.id}" type="button">
       <span class="avatar">${i.svg}</span>
@@ -165,6 +192,11 @@ function showIconPicker() {
         // Close modal and re-render
         document.querySelector(".modal-overlay")?.click();
         render();
+        // Restore form values
+        setTimeout(() => {
+          if ($("#name")) $("#name").value = currentName;
+          if ($("#room")) $("#room").value = currentRoom;
+        }, 50);
       });
     });
     
@@ -172,7 +204,7 @@ function showIconPicker() {
     document.getElementById("avatarUpload")?.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) {
-        handleImageUpload(file);
+        handleImageUpload(file, currentName, currentRoom);
         document.querySelector(".modal-overlay")?.click();
       }
     });
@@ -180,7 +212,7 @@ function showIconPicker() {
 }
 
 // Image upload handler
-function handleImageUpload(file) {
+function handleImageUpload(file, savedName, savedRoom) {
   if (!file || !file.type.startsWith('image/')) {
     showToast("Please upload a valid image file", "error");
     return;
@@ -193,6 +225,11 @@ function handleImageUpload(file) {
     showToast("Custom avatar uploaded!", "success");
     // Re-render to show the new avatar
     render();
+    // Restore form values
+    setTimeout(() => {
+      if ($("#name")) $("#name").value = savedName || "";
+      if ($("#room")) $("#room").value = savedRoom || "";
+    }, 50);
   };
   reader.readAsDataURL(file);
 }
@@ -283,36 +320,44 @@ function send(payload){
 // ---------- UI rendering ----------
 function render(){
   const root = $("#app");
+  const historyBtn = document.getElementById("historyBtn");
+  
   if(!view){
+    if(historyBtn) historyBtn.style.display = "none";
     root.innerHTML = renderIdentity();
     wireIdentity();
     return;
   }
 
   if(view.phase === "LOBBY"){
+    if(historyBtn) historyBtn.style.display = "none";
     root.innerHTML = renderLobby(view);
     wireLobby(view);
     return;
   }
 
   if(view.phase === "WORD_PICK"){
+    if(historyBtn) historyBtn.style.display = "none";
     root.innerHTML = renderWordPick(view);
     wireWordPick(view);
     return;
   }
 
   if(view.phase === "MAPPING"){
+    if(historyBtn) historyBtn.style.display = "none";
     root.innerHTML = renderMapping(view);
     wireMapping(view);
     return;
   }
 
   if(view.phase === "PLAY"){
+    if(historyBtn) historyBtn.style.display = "flex";
     root.innerHTML = renderPlay(view);
     wirePlay(view);
     return;
   }
 
+  if(historyBtn) historyBtn.style.display = "none";
   root.innerHTML = `<div class="card"><h2>Unknown state</h2></div>`;
 }
 
@@ -324,7 +369,17 @@ function renderIdentity(){
 
   return `
   <section class="card">
-    <h2>Start Game</h2>
+    <div class="spread">
+      <h2 style="margin-bottom:0">Start Game</h2>
+      <button class="btn-help" id="helpBtn" aria-label="Instructions" style="margin-top:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <path d="M12 17h.01"/>
+        </svg>
+        <span>How to Play</span>
+      </button>
+    </div>
     <p>Enter your name and choose your avatar to begin.</p>
 
     <div class="grid2">
@@ -391,7 +446,14 @@ function wireIdentity(){
 
 function renderLobby(v){
   const room = v.roomId;
-  const players = v.players.map(p => playerCard(p)).join("");
+  const players = v.players.map(p => {
+    const teamSwitch = v.me.isHost ? `
+      <button class="btn-team-switch" data-player-id="${p.playerId}" style="margin-top:8px; padding:6px 12px; font-size:11px; border-radius:16px;">
+        Switch to ${p.team === 'A' ? 'Team B' : 'Team A'}
+      </button>
+    ` : '';
+    return playerCard(p) + teamSwitch;
+  }).join("");
   const canStart = v.players.length === 4;
 
   return `
@@ -441,6 +503,19 @@ function wireLobby(v){
   $("#start")?.addEventListener("click", () => {
     send({ type:"START" });
   });
+  
+  // Team switching for host
+  if (v.me.isHost) {
+    document.querySelectorAll(".btn-team-switch")?.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const playerId = btn.dataset.playerId;
+        const player = v.players.find(p => p.playerId === playerId);
+        const newTeam = player?.team === 'A' ? 'B' : 'A';
+        send({ type:"SWITCH_TEAM", playerId, team: newTeam });
+        showToast("Team switched!", "success");
+      });
+    });
+  }
 }
 
 function renderWordPick(v){
@@ -746,20 +821,8 @@ function renderPlay(v){
           ${verifyBlock}
           ${mappingGuessBlock}
         </div>
-      </div>
-
-      <div class="col">
-        <div class="card">
-          <h2>🧾 Turn log</h2>
-          <p class="muted">This is synced. Notes are not.</p>
-          <div class="chips">
-            ${(v.log || []).slice(-10).reverse().map(line =>
-              `<span class="chip mono">${escapeHtml(line)}</span>`
-            ).join("") || `<span class="chip">No events yet</span>`}
-          </div>
-
-          <div class="sep"></div>
-
+        
+        <div class="card" style="margin-top:16px;">
           <h3>📝 Extra notes (not synced)</h3>
           <textarea id="notesEnemy" placeholder="Enemy mapping guesses, patterns…">${escapeHtml(clientNotes.enemyNotes)}</textarea>
         </div>
@@ -859,4 +922,5 @@ function escapeHtml(s){
 
 // boot
 document.getElementById("helpBtn")?.addEventListener("click", showInstructions);
+document.getElementById("historyBtn")?.addEventListener("click", showHistory);
 render();

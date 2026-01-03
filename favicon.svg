@@ -1,35 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3651d4;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1a2c6b;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0a0a;stop-opacity:1" />
     </linearGradient>
     <linearGradient id="lock" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#7aa2ff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#3ddc97;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#ffdd00;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ff88;stop-opacity:1" />
     </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   
   <!-- Background circle -->
-  <circle cx="32" cy="32" r="30" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
   
-  <!-- Lock body -->
-  <rect x="20" y="28" width="24" height="20" rx="3" fill="url(#lock)" opacity="0.9"/>
+  <!-- Lock body with neon glow -->
+  <rect x="20" y="28" width="24" height="20" rx="4" fill="url(#lock)" filter="url(#glow)"/>
   
-  <!-- Lock shackle -->
-  <path d="M 24 28 L 24 22 Q 24 16 32 16 Q 40 16 40 22 L 40 28" 
+  <!-- Lock shackle with neon effect -->
+  <path d="M 24 28 L 24 20 Q 24 14 32 14 Q 40 14 40 20 L 40 28" 
         stroke="url(#lock)" 
-        stroke-width="4" 
+        stroke-width="4.5" 
         fill="none" 
         stroke-linecap="round"
-        opacity="0.9"/>
+        filter="url(#glow)"/>
   
   <!-- Keyhole -->
-  <circle cx="32" cy="36" r="3" fill="#0b0d10" opacity="0.6"/>
-  <rect x="30.5" y="36" width="3" height="6" rx="1.5" fill="#0b0d10" opacity="0.6"/>
+  <circle cx="32" cy="36" r="3.5" fill="#000" opacity="0.7"/>
+  <rect x="30" y="36" width="4" height="7" rx="2" fill="#000" opacity="0.7"/>
   
-  <!-- Numbers accent -->
-  <text x="26" y="46" font-family="monospace" font-size="8" font-weight="bold" fill="#e9eef7" opacity="0.5">1</text>
-  <text x="32" y="46" font-family="monospace" font-size="8" font-weight="bold" fill="#e9eef7" opacity="0.5">2</text>
-  <text x="38" y="46" font-family="monospace" font-size="8" font-weight="bold" fill="#e9eef7" opacity="0.5">3</text>
+  <!-- Decorative neon dots -->
+  <circle cx="32" cy="32" r="1" fill="#ffdd00" opacity="0.6" filter="url(#glow)"/>
+  <circle cx="28" cy="40" r="0.8" fill="#00ff88" opacity="0.5"/>
+  <circle cx="36" cy="40" r="0.8" fill="#00ff88" opacity="0.5"/>
 </svg>
