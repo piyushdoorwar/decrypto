@@ -12,12 +12,51 @@ const copyText = async (t) => {
   try { await navigator.clipboard.writeText(t); return true; } catch { return false; }
 };
 
+// Toast notification system
+function showToast(message, type = "info") {
+  const container = document.getElementById("toastContainer") || createToastContainer();
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  
+  const iconMap = {
+    success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`,
+    error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>`,
+    warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 20h20L12 2z"/><path d="M12 9v4M12 17h.01"/></svg>`,
+    info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`
+  };
+  
+  toast.innerHTML = `
+    <div class="toast-icon">${iconMap[type] || iconMap.info}</div>
+    <div class="toast-message">${escapeHtml(message)}</div>
+  `;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add("show"), 10);
+  
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+function createToastContainer() {
+  const container = document.createElement("div");
+  container.id = "toastContainer";
+  container.className = "toast-container";
+  document.body.appendChild(container);
+  return container;
+}
+
 const ICONS = [
-  { id:"bolt", label:"Bolt", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h7l-1 8 10-12h-7l0-8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>` },
-  { id:"key", label:"Key", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M21 10a6 6 0 1 1-11.3-2.7A6 6 0 0 1 21 10Z" stroke="currentColor" stroke-width="2"/><path d="M10 10h11l-2 2 2 2-2 2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>` },
-  { id:"eye", label:"Eye", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/></svg>` },
-  { id:"cube", label:"Cube", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 22V12L3 7" stroke="currentColor" stroke-width="2"/><path d="M12 12l9-5" stroke="currentColor" stroke-width="2"/></svg>` },
-  { id:"mask", label:"Mask", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M4 7c2 2 4 3 8 3s6-1 8-3v7c0 5-4 8-8 8s-8-3-8-8V7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 14h0" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M16 14h0" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>` },
+  { id:"crown", label:"Crown", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M2 18h20v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2z" fill="currentColor" opacity=".2"/><path d="M2 12l4 3 4-6 4 6 4-3v6H2v-6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="8" r="2" fill="currentColor"/><circle cx="12" cy="4" r="2" fill="currentColor"/><circle cx="18" cy="8" r="2" fill="currentColor"/></svg>` },
+  { id:"wizard", label:"Wizard", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" opacity=".2"/><path d="M19 14l.5 2 2 .5-2 .5-.5 2-.5-2-2-.5 2-.5.5-2z" fill="currentColor"/></svg>` },
+  { id:"shield", label:"Shield", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 4 4 4 4 4v7c0 5 3 9 8 11 5-2 8-6 8-11V4s-4 0-8-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" opacity=".2"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+  { id:"dragon", label:"Dragon", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 12c0-3 2-5 4-6 1-1 2-2 4-3 3 2 6 5 6 9 0 3-2 6-5 8-2 1-4 1-6 0-2-2-3-5-3-8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" opacity=".15"/><circle cx="14" cy="10" r="1.5" fill="currentColor"/><path d="M4 10c0-1 1-2 2-2h2M20 14l2-2-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>` },
+  { id:"phoenix", label:"Phoenix", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l-2 4-3-1 1 3-4 2 4 1-1 3 3-1 2 4 2-4 3 1-1-3 4-1-4-2 1-3-3 1-2-4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" opacity=".2"/><circle cx="12" cy="8" r="2" fill="currentColor"/><path d="M8 18c0-2 1.5-3 4-3s4 1 4 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>` },
+  { id:"castle", label:"Castle", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M3 10V8h2V6h2V4h2v2h2V4h2v2h2V4h2v2h2v2h2v2h-2v10H5V10H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" opacity=".15"/><rect x="10" y="14" width="4" height="6" stroke="currentColor" stroke-width="2"/></svg>` },
+  { id:"compass", label:"Compass", svg:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="currentColor" opacity=".1"/><path d="M15 9l-6 3 3 6 6-3-3-6z" fill="currentColor" opacity=".3" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>` },
+  { id:"sword", label:"Sword", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5l3 3L20 7l1-1-4-4-1 1-2.5 2.5zM9 12l-5 5 2 2 5-5-2-2z" fill="currentColor" opacity=".2"/><path d="M6 18l-2 2M4 14l16-9M11 13l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
 ];
 
 const LOCAL = {
@@ -71,7 +110,7 @@ function connect(roomId){
       render();
     }
     if(msg.type === "ERROR"){
-      alert(msg.message);
+      showToast(msg.message, "error");
     }
   });
 }
@@ -181,19 +220,21 @@ function wireIdentity(){
   $("#createRoom")?.addEventListener("click", () => {
     const name = $("#name").value.trim();
     const room = ($("#room").value.trim() || makeRoomCode());
-    if(!name) return alert("Enter a name");
+    if(!name) return showToast("Please enter your name", "warning");
     LOCAL.name = name;
     $("#room").value = room;
     connect(room);
+    showToast("Creating room...", "info");
   });
 
   $("#joinRoom")?.addEventListener("click", () => {
     const name = $("#name").value.trim();
     const room = $("#room").value.trim();
-    if(!name) return alert("Enter a name");
-    if(!room) return alert("Enter a room code");
+    if(!name) return showToast("Please enter your name", "warning");
+    if(!room) return showToast("Please enter a room code", "warning");
     LOCAL.name = name;
     connect(room);
+    showToast("Joining room...", "info");
   });
 }
 
@@ -243,7 +284,7 @@ function renderLobby(v){
 function wireLobby(v){
   $("#copyRoom")?.addEventListener("click", async () => {
     const ok = await copyText(v.roomId);
-    alert(ok ? "Copied" : "Copy failed");
+    showToast(ok ? "Room code copied to clipboard!" : "Failed to copy", ok ? "success" : "error");
   });
   $("#leave")?.addEventListener("click", () => { location.reload(); });
   $("#start")?.addEventListener("click", () => {
@@ -584,26 +625,29 @@ function wirePlay(v){
 
   $("#submitCode")?.addEventListener("click", () => {
     const raw = $("#code").value.trim();
-    if(!isDigits3(raw)) return alert("Code must be exactly 3 digits (1–4). Example: 311");
+    if(!isDigits3(raw)) return showToast("Code must be exactly 3 digits (1-4). Example: 311", "warning");
     send({ type:"SUBMIT_CODE", code: raw });
+    showToast("Code submitted!", "success");
   });
 
   $("#submitClues")?.addEventListener("click", () => {
     const c1 = clampWord($("#c1").value);
     const c2 = clampWord($("#c2").value);
     const c3 = clampWord($("#c3").value);
-    if(!c1 || !c2 || !c3) return alert("All 3 clues required. Single word only.");
+    if(!c1 || !c2 || !c3) return showToast("All 3 clues required. Single word only.", "warning");
     if(c1 !== $("#c1").value.trim() || c2 !== $("#c2").value.trim() || c3 !== $("#c3").value.trim()){
       // spaces were removed
-      return alert("Clues must be a single word (no spaces).");
+      return showToast("Clues must be a single word (no spaces).", "warning");
     }
     send({ type:"SUBMIT_CLUES", clues:[c1,c2,c3] });
+    showToast("Clues submitted!", "success");
   });
 
   $("#submitGuess")?.addEventListener("click", () => {
     const g = $("#guess").value.trim();
-    if(!isDigits3(g)) return alert("Guess must be exactly 3 digits (1–4).");
+    if(!isDigits3(g)) return showToast("Guess must be exactly 3 digits (1-4).", "warning");
     send({ type:"SUBMIT_GUESS", guess:g });
+    showToast("Guess submitted!", "success");
   });
 
   $("#verify")?.addEventListener("click", () => send({ type:"VERIFY_TURN" }));
