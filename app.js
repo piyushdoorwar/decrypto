@@ -48,6 +48,109 @@ function createToastContainer() {
   return container;
 }
 
+// Modal system
+function showModal(title, content) {
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay";
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>${escapeHtml(title)}</h2>
+        <button class="modal-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">${content}</div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  setTimeout(() => modal.classList.add("show"), 10);
+  
+  const close = () => {
+    modal.classList.remove("show");
+    setTimeout(() => modal.remove(), 300);
+  };
+  
+  modal.querySelector(".modal-close").addEventListener("click", close);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+}
+
+function showInstructions() {
+  const content = `
+    <div class="instructions">
+      <h3>🎯 Objective</h3>
+      <p>Your team must communicate using coded messages while intercepting the enemy's codes. First team to 2 interceptions wins!</p>
+      
+      <h3>🎮 Setup</h3>
+      <ul>
+        <li>Exactly <strong>4 players</strong> required (2 vs 2)</li>
+        <li>Each team picks <strong>4 secret words</strong> and creates a mapping (1-4)</li>
+        <li>Only your team knows your word mapping</li>
+      </ul>
+      
+      <h3>📝 Each Round</h3>
+      <ol>
+        <li><strong>Encryptor</strong> creates a 3-digit code using numbers 1-4 (e.g., "3-1-2")</li>
+        <li><strong>Encryptor</strong> gives 3 single-word clues matching the code</li>
+        <li><strong>Teammates</strong> guess the 3-digit code from the clues</li>
+        <li><strong>Opponents</strong> try to intercept by guessing your code</li>
+      </ol>
+      
+      <h3>✅ Scoring</h3>
+      <ul>
+        <li><strong>Internal Point:</strong> Your team guesses correctly</li>
+        <li><strong>Interception:</strong> Opponents guess your code correctly (+1 point for them)</li>
+        <li><strong>Win:</strong> First team to get 2 interceptions wins!</li>
+      </ul>
+      
+      <h3>⚠️ Rules</h3>
+      <ul>
+        <li>Clues must be <strong>single words</strong> (no spaces)</li>
+        <li>Codes use digits <strong>1-4 only</strong></li>
+        <li>Can't reuse the same clue for the same word</li>
+        <li>All 4 digits (1-4) must be used at least once every 2 rounds</li>
+      </ul>
+      
+      <h3>💡 Tips</h3>
+      <ul>
+        <li>Be creative but not too obscure with clues</li>
+        <li>Track enemy clues to learn their words</li>
+        <li>Use the notes section to remember patterns</li>
+        <li>Balance being understood by teammates vs hiding from opponents</li>
+      </ul>
+    </div>
+  `;
+  showModal("How to Play Decrypto", content);
+}
+
+// Image upload handler
+function handleImageUpload(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    showToast("Please upload a valid image file", "error");
+    return;
+  }
+  
+  if (file.size > 500000) { // 500KB limit
+    showToast("Image too large. Max 500KB", "warning");
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    LOCAL.customAvatar = e.target.result;
+    LOCAL.icon = "custom";
+    showToast("Custom avatar uploaded!", "success");
+    // Re-render to show the new avatar
+    if (highlightIcon) highlightIcon("custom");
+  };
+  reader.readAsDataURL(file);
+}
+
 const ICONS = [
   { id:"crown", label:"Crown", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M2 18h20v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2z" fill="currentColor" opacity=".2"/><path d="M2 12l4 3 4-6 4 6 4-3v6H2v-6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="8" r="2" fill="currentColor"/><circle cx="12" cy="4" r="2" fill="currentColor"/><circle cx="18" cy="8" r="2" fill="currentColor"/></svg>` },
   { id:"wizard", label:"Wizard", svg:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" opacity=".2"/><path d="M19 14l.5 2 2 .5-2 .5-.5 2-.5-2-2-.5 2-.5.5-2z" fill="currentColor"/></svg>` },
@@ -66,6 +169,8 @@ const LOCAL = {
   set name(v){ localStorage.setItem("dc_name", v); },
   get icon(){ return localStorage.getItem("dc_icon") || ICONS[0].id; },
   set icon(v){ localStorage.setItem("dc_icon", v); },
+  get customAvatar(){ return localStorage.getItem("dc_customAvatar"); },
+  set customAvatar(v){ localStorage.setItem("dc_customAvatar", v); },
   get lastRoom(){ return localStorage.getItem("dc_room") || ""; },
   set lastRoom(v){ localStorage.setItem("dc_room", v); },
 };
@@ -96,7 +201,16 @@ function connect(roomId){
 
   sock.addEventListener("open", () => {
     setNetStatus(true, "Connected");
-    send({ type:"HELLO", playerId: LOCAL.playerId, name: LOCAL.name, icon: LOCAL.icon });
+    const payload = { 
+      type:"HELLO", 
+      playerId: LOCAL.playerId, 
+      name: LOCAL.name, 
+      icon: LOCAL.icon 
+    };
+    if (LOCAL.icon === "custom" && LOCAL.customAvatar) {
+      payload.customAvatar = LOCAL.customAvatar;
+    }
+    send(payload);
   });
 
   sock.addEventListener("close", () => {
@@ -164,6 +278,13 @@ function renderIdentity(){
       <strong>${i.label}</strong>
     </button>
   `).join("");
+  
+  const customAvatarHtml = LOCAL.customAvatar ? `
+    <button class="chip" data-icon="custom" type="button">
+      <span class="avatar"><img src="${LOCAL.customAvatar}" alt="Custom" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/></span>
+      <strong>Custom</strong>
+    </button>
+  ` : '';
 
   return `
   <section class="card">
@@ -183,8 +304,19 @@ function renderIdentity(){
 
     <div class="sep"></div>
 
-    <h3>Pick an icon</h3>
-    <div class="chips" id="iconGrid">${iconOptions}</div>
+    <div class="spread">
+      <h3>Pick an icon</h3>
+      <div class="hstack">
+        <label class="btn-upload">
+          <input type="file" id="avatarUpload" accept="image/*" style="display:none" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+          <span>Upload Image</span>
+        </label>
+      </div>
+    </div>
+    <div class="chips" id="iconGrid">${iconOptions}${customAvatarHtml}</div>
 
     <div class="sep"></div>
 
@@ -208,6 +340,16 @@ function wireIdentity(){
   let selected = LOCAL.icon;
 
   highlightIcon(selected);
+  
+  // Image upload handler
+  $("#avatarUpload")?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+      // Re-render to show new custom avatar option
+      render();
+    }
+  });
 
   iconGrid?.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-icon]");
@@ -664,10 +806,17 @@ function wirePlay(v){
 
 // ---------- small UI helpers ----------
 function playerCard(p){
-  const icon = ICONS.find(i=>i.id===p.icon)?.svg || ICONS[0].svg;
+  let avatarContent;
+  if (p.icon === "custom" && p.customAvatar) {
+    avatarContent = `<img src="${p.customAvatar}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;"/>`;
+  } else {
+    const iconData = ICONS.find(i=>i.id===p.icon);
+    avatarContent = iconData?.svg || ICONS[0].svg;
+  }
+  
   return `
     <div class="player">
-      <div class="avatar">${icon}</div>
+      <div class="avatar">${avatarContent}</div>
       <div>
         <div class="name">${escapeHtml(p.name)}</div>
         <div class="meta">
@@ -708,4 +857,5 @@ function escapeHtml(s){
 }
 
 // boot
+document.getElementById("helpBtn")?.addEventListener("click", showInstructions);
 render();
