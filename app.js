@@ -418,6 +418,11 @@ function renderIdentity(){
 }
 
 function wireIdentity(){
+  // Open help modal
+  $("#helpBtn")?.addEventListener("click", () => {
+    showInstructions();
+  });
+
   // Open icon picker modal
   $("#chooseIcon")?.addEventListener("click", () => {
     showIconPicker();
